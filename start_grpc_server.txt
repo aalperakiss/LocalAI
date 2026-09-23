@@ -1,0 +1,9 @@
+Run this in the Workbench command window (File > Scripting > Open Command Window)
+while your model is open in Mechanical. It returns the gRPC port to enter in the app.
+
+    port = GetSystem("SYS").GetContainer(ComponentName="Model").StartGrpcServer()
+    print(port)
+
+Replace "SYS" with the system name if your project has more than one analysis system.
+A new port is issued every time Mechanical restarts, so repeat this after each restart
+and press Connect in the app with the new number.

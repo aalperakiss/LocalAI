@@ -1,0 +1,17 @@
+# Local config, machine-specific paths and ports
+config.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Runtime output
+logs/
+output/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini

@@ -1,0 +1,108 @@
+{
+  "app": {
+    "title": "Alper - OpenSource AI Model",
+    "host": "127.0.0.1",
+    "port": 8100,
+    "output_folder": "output",
+    "log_folder": "logs"
+  },
+  "ollama": {
+    "url": "http://127.0.0.1:11434",
+    "model": "gpt-oss:20b",
+    "num_ctx": 8192,
+    "temperature": 0.2,
+    "think": false,
+    "keep_alive": "60m",
+    "max_tool_rounds": 8,
+    "tool_result_max_chars": 6000
+  },
+  "mechanical": {
+    "grpc_port": 10000,
+    "auto_connect": true
+  },
+  "write_mode": {
+    "enabled": true,
+    "default_on": false,
+    "require_approval": true,
+    "approval_timeout_s": 300
+  },
+  "report": {
+    "images": true,
+    "max_images": 80,
+    "full_size_up_to": 2,
+    "image_width_in": 5.8,
+    "thumb_width_in": 1.7
+  },
+  "tool_descriptions": {
+    "list_boundary_conditions": "List EVERY object under an analysis: supports AND loads together (fixed support, frictionless support, displacement, force, remote force, pressure, moment, gravity, analysis settings), each with name and type. This is the only tool for supports or loads; there is no separate list_loads. Args: analysis_index (0 = first analysis).",
+    "get_model_info": "Get the model overview: bodies with their material, named selection names, and the list of analyses with name and type. Call this first when you do not know which analyses exist. No arguments.",
+    "suppress_bodies": "Suppress or unsuppress bodies whose name starts with a prefix. An empty prefix hits EVERY body in the model. Args: name_prefix, suppress (true = suppress)."
+  },
+  "mcp_servers": {
+    "mechanical": {
+      "enabled": true,
+      "command": "C:\\path\\to\\mechanical-mcp\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-c",
+        "import sys; sys.path.insert(0, r'C:\\path\\to\\mechanical-mcp'); import mechanical_mcp_server as m; m.mcp.run()"
+      ],
+      "env": {},
+      "llm_tools": [
+        "check_mechanical_connection",
+        "get_model_info",
+        "list_materials",
+        "list_named_selections",
+        "list_boundary_conditions",
+        "list_point_masses",
+        "get_mesh_statistics",
+        "get_solve_status",
+        "get_modal_frequencies"
+      ],
+      "write_tools": [
+        "assign_material",
+        "set_mesh_element_size",
+        "generate_mesh",
+        "add_fixed_support",
+        "add_frictionless_support",
+        "add_displacement",
+        "add_remote_displacement",
+        "add_force",
+        "add_remote_force",
+        "add_pressure",
+        "add_moment",
+        "add_total_deformation",
+        "add_directional_deformation",
+        "add_equivalent_stress",
+        "add_principal_stress",
+        "add_stress_tool",
+        "add_reaction_force",
+        "add_total_deformation_all_modes",
+        "convert_part_to_point_mass",
+        "convert_prefix_to_point_mass",
+        "suppress_bodies",
+        "delete_named_selection",
+        "solve_analysis"
+      ]
+    },
+    "acp": {
+      "enabled": false,
+      "command": "C:\\path\\to\\python.exe",
+      "args": ["C:\\path\\to\\acp-mcp-agent\\acp_mcp.py"],
+      "env": {
+        "ACP_BRIDGE_PATH": "C:\\path\\to\\acp-mcp-agent\\acp_gui_bridge.py"
+      },
+      "llm_tools": [
+        "acp_gui_status",
+        "acp_gui_get_layup",
+        "acp_get_layup",
+        "acp_check_layup_rules"
+      ],
+      "write_tools": [
+        "acp_gui_set_ply_angles",
+        "acp_gui_set_ply_counts",
+        "acp_gui_add_ply",
+        "acp_gui_save"
+      ]
+    }
+  }
+}

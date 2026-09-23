@@ -1,0 +1,2 @@
+port = GetSystem("SYS").GetContainer(ComponentName="Model").StartGrpcServer()
+print(port)

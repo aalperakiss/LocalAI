@@ -1,0 +1,597 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alper - OpenSource AI Model</title>
+<style>
+  :root {
+    --bg: #edf0f3; --surface: #ffffff; --ink: #16202b; --muted: #5e6b78; --line: #d5dbe1;
+    --accent: #1e4fd8; --accent-ink: #ffffff; --ok: #1f8a5b; --bad: #c23b2a; --wait: #b7791f;
+    --user: #e3e9f6; --code: #f3f5f8;
+    --legend: linear-gradient(to top, #1a2fd6 0%, #1a8ce0 20%, #19c3a8 38%, #4fcf3a 55%, #d8d51f 72%, #f08a1c 86%, #d8261c 100%);
+    --display: "Bahnschrift", "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11161c; --surface: #19212a; --ink: #e2e8ee; --muted: #93a1af; --line: #2b3541;
+      --accent: #5b86ff; --accent-ink: #0d1117; --user: #1f2b40; --code: #111820;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); display: flex; }
+  button, textarea { font: inherit; color: inherit; }
+  button:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- sidebar: the contour legend is the one brand element ---------- */
+  aside {
+    width: 290px; flex: none; background: var(--surface); border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; position: relative; padding: 22px 22px 18px 30px; overflow-y: auto;
+  }
+  aside::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--legend); }
+  .brand h1 { font: 600 22px/1.15 var(--display); letter-spacing: .2px; margin: 0; }
+  .brand p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+  .block { margin-top: 26px; }
+  .block h2 { font: 600 13px/1 var(--display); color: var(--muted); margin: 0 0 10px; letter-spacing: .3px; }
+  .row { display: grid; grid-template-columns: 10px 1fr; gap: 4px 10px; align-items: baseline; margin-bottom: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); transform: translateY(1px); }
+  .dot.ok { background: var(--ok); } .dot.bad { background: var(--bad); } .dot.wait { background: var(--wait); }
+  .row b { font-weight: 600; font-size: 14px; }
+  .row span { grid-column: 2; color: var(--muted); font-size: 12.5px; word-break: break-word; }
+
+  .btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.wide { width: 100%; }
+  .connect { display: flex; gap: 8px; }
+  .connect input { flex: 1; min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 8px 10px; font: inherit; font-variant-numeric: tabular-nums; color: inherit; }
+  .connect input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .pick { grid-column: 2; margin-top: 4px; width: 100%; border: 1px solid var(--line); background: var(--surface); color: inherit; border-radius: 6px; padding: 5px 7px; font: inherit; font-size: 13px; }
+  .mode { display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 13.5px; cursor: pointer; }
+  .mode input { width: 16px; height: 16px; accent-color: var(--bad); margin: 0; }
+  .mode span { color: var(--muted); }
+  .mode.on span { color: var(--bad); font-weight: 600; }
+  .mode input#think, .mode input#ask { accent-color: var(--accent); }
+  #approvalLine { margin: 10px 0 0; font-size: 12.5px; color: var(--bad); }
+  #approvalLine .btn { padding: 3px 9px; font-size: 12.5px; margin-left: 4px; }
+  .approval { border: 1px solid var(--wait); border-left-width: 4px; border-radius: 8px; padding: 10px 12px; margin: 8px 0; background: var(--surface); }
+  .approval h4 { font: 600 13px/1.3 var(--display); margin: 0 0 6px; color: var(--wait); letter-spacing: .3px; }
+  .approval code { font-family: var(--mono); }
+  .approval pre { font: 12px/1.45 var(--mono); background: var(--code); padding: 8px 10px; border-radius: 6px; margin: 6px 0 10px; white-space: pre-wrap; }
+  .approval .acts { display: flex; gap: 8px; }
+  .approval .verdict { font-size: 13px; color: var(--muted); }
+  .btn.run { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; }
+  details.tool.write summary::after { content: " write"; color: var(--bad); }
+  #reportLog { margin: 10px 0 0; font-size: 13px; color: var(--muted); min-height: 1em; }
+  #reports { list-style: none; margin: 10px 0 0; padding: 0; font-size: 13px; }
+  #reports li { padding: 5px 0; border-top: 1px solid var(--line); }
+  #reports a { color: var(--accent); text-decoration: none; }
+  #reports a:hover { text-decoration: underline; }
+  .foot { margin-top: auto; padding-top: 22px; font-size: 12px; color: var(--muted); }
+
+  /* ---------- main chat ---------- */
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { display: flex; justify-content: flex-end; padding: 12px 24px 0; }
+  #log { flex: 1; overflow-y: auto; padding: 12px 24px 24px; }
+  .col { max-width: 820px; margin: 0 auto; }
+
+  .empty { padding: 11vh 0 0; }
+  .empty h2 { font: 600 30px/1.2 var(--display); margin: 0 0 10px; }
+  .empty p { color: var(--muted); margin: 0 0 22px; max-width: 60ch; }
+  .suggest { display: flex; flex-wrap: wrap; gap: 8px; }
+  .suggest button { border: 1px solid var(--line); background: var(--surface); border-radius: 18px; padding: 7px 14px; cursor: pointer; font-size: 14px; }
+  .suggest button:hover { border-color: var(--accent); color: var(--accent); }
+
+  .msg { margin: 18px 0; }
+  .msg.user { display: flex; justify-content: flex-end; }
+  .msg.user .body { background: var(--user); padding: 10px 14px; border-radius: 12px 12px 3px 12px; max-width: 80%; white-space: pre-wrap; }
+  .msg.bot .body { padding: 2px 0; }
+  .body p { margin: 0 0 10px; } .body p:last-child { margin-bottom: 0; }
+  .body h3, .body h4 { font: 600 16px/1.3 var(--display); margin: 14px 0 6px; }
+  .body ul, .body ol { margin: 0 0 10px; padding-left: 22px; }
+  .body code { font: 13px var(--mono); background: var(--code); padding: 1px 5px; border-radius: 4px; }
+  .body pre { background: var(--code); padding: 10px 12px; border-radius: 6px; overflow-x: auto; }
+  .body pre code { background: none; padding: 0; }
+  .tablewrap { overflow-x: auto; margin: 0 0 10px; }
+  .body table { border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .body th, .body td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; vertical-align: top; }
+  .body th { background: var(--code); font-weight: 600; }
+  .err { color: var(--bad); }
+
+  details.tool { border-left: 3px solid var(--line); padding: 2px 0 2px 10px; margin: 6px 0; font-size: 13px; color: var(--muted); }
+  details.tool.ok { border-color: var(--ok); } details.tool.bad { border-color: var(--bad); }
+  details.tool summary { cursor: pointer; font-family: var(--mono); }
+  details.tool pre { font: 12px/1.45 var(--mono); background: var(--code); padding: 8px 10px; border-radius: 6px; overflow-x: auto; white-space: pre-wrap; color: var(--ink); max-height: 260px; }
+  details.reason { margin: 6px 0; font-size: 13px; color: var(--muted); }
+  details.reason summary { cursor: pointer; }
+  details.reason pre { font: 12px/1.5 var(--body); background: var(--code); padding: 8px 10px; border-radius: 6px; white-space: pre-wrap; max-height: 240px; overflow-y: auto; }
+  .typing { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+  form { padding: 0 24px 20px; }
+  .composer { display: flex; gap: 10px; align-items: flex-end; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 8px 8px 8px 14px; }
+  .composer:focus-within { border-color: var(--accent); }
+  textarea { flex: 1; border: 0; background: transparent; resize: none; max-height: 200px; padding: 6px 0; outline: none; }
+
+  @media (max-width: 780px) {
+    body { flex-direction: column; height: auto; min-height: 100%; }
+    aside { width: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+    aside::before { width: 100%; height: 6px; bottom: auto; background: linear-gradient(to right, #1a2fd6, #1a8ce0, #19c3a8, #4fcf3a, #d8d51f, #f08a1c, #d8261c); }
+    main { min-height: 80vh; }
+    #log, form, .topbar { padding-left: 14px; padding-right: 14px; }
+  }
+  @media (prefers-reduced-motion: no-preference) { .dot.wait { animation: pulse 1.2s infinite; } }
+  @keyframes pulse { 50% { opacity: .35; } }
+</style>
+<style>
+  /* Engineering blue: navy shell with a wireframe-mesh texture, cool paper canvas.
+     This block is loaded after the original stylesheet and overrides it. */
+  :root {
+    --bg: #eef3f9; --surface: #ffffff; --ink: #0f2233; --muted: #55708a; --line: #cfdcea;
+    --accent: #1b5cf3; --accent-ink: #ffffff; --cyan: #1f9cc4;
+    --ok: #1d8a63; --bad: #c8412f; --wait: #b0761a;
+    --user: #dce8fb; --code: #f1f5fa;
+    --side: #0d2137; --side-2: #123252; --side-ink: #e8f1fb; --side-muted: #8fb0d0; --side-line: #22456d;
+    --mesh: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cpath d='M0 0h48v48H0z' fill='none'/%3E%3Cpath d='M0 0h48M0 24h48M0 48h48M0 0v48M24 0v48M48 0v48M0 0l24 24M24 24l24 24M48 0L24 24M24 24L0 48' stroke='%23ffffff' stroke-opacity='.07' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+    --mesh-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64'%3E%3Cpath d='M0 0h64M0 32h64M0 64h64M0 0v64M32 0v64M64 0v64M0 0l32 32M32 32l32 32M64 0L32 32M32 32L0 64' stroke='%231b5cf3' stroke-opacity='.05' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+    --display: "Bahnschrift", "DIN Alternate", "Segoe UI", system-ui, sans-serif;
+    --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --mono: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0a1622; --surface: #12202f; --ink: #e2ecf6; --muted: #8aa4bd; --line: #24364a;
+      --accent: #5b8cff; --accent-ink: #08131f; --user: #1b3050; --code: #0d1927;
+      --side: #081522; --side-2: #0e2439; --side-line: #1b3a58;
+    }
+  }
+  body {
+    background: var(--bg) var(--mesh-light); color: var(--ink);
+    font: 15px/1.55 var(--body); display: flex;
+  }
+  button, textarea, input, select { font: inherit; color: inherit; }
+
+  /* ---------- sidebar ---------- */
+  aside {
+    width: 300px; flex: none; color: var(--side-ink);
+    background: linear-gradient(170deg, var(--side-2), var(--side) 55%), var(--side);
+    border-right: 0; display: flex; flex-direction: column; position: relative;
+    padding: 0 22px 18px; overflow-y: auto;
+  }
+  aside::before {
+    content: ""; position: absolute; inset: 0; width: auto; background: none;
+    background-image: var(--mesh); pointer-events: none;
+  }
+  aside > * { position: relative; }
+  .brand { padding: 24px 0 18px; border-bottom: 1px solid var(--side-line); }
+  .brand h1 { font: 600 21px/1.15 var(--display); letter-spacing: .3px; margin: 0; }
+  .brand p { margin: 7px 0 0; color: var(--side-muted); font-size: 12.5px; }
+
+  .block { margin-top: 22px; }
+  .block h2 {
+    font: 600 11.5px/1 var(--display); color: var(--side-muted); margin: 0 0 12px;
+    letter-spacing: 1.2px; text-transform: uppercase;
+  }
+  .row { display: grid; grid-template-columns: 9px 1fr; gap: 3px 10px; align-items: baseline; margin-bottom: 11px; }
+  .dot { width: 9px; height: 9px; background: var(--side-line); box-shadow: 0 0 0 3px rgba(255,255,255,.04); }
+  .dot.ok { background: #35d39a; } .dot.bad { background: #ff7a6a; } .dot.wait { background: #f0b64a; }
+  .row b { font-weight: 600; font-size: 13.5px; }
+  .row span { grid-column: 2; color: var(--side-muted); font-size: 12.5px; word-break: break-word; }
+
+  .btn {
+    border: 1px solid var(--side-line); background: rgba(255,255,255,.05); color: var(--side-ink);
+    padding: 8px 14px; border-radius: 6px; cursor: pointer;
+  }
+  .btn:hover { border-color: var(--cyan); background: rgba(255,255,255,.1); }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.12); }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .pick, .connect input {
+    grid-column: 2; width: 100%; border: 1px solid var(--side-line); background: rgba(0,0,0,.25);
+    color: var(--side-ink); border-radius: 6px; padding: 6px 9px; font-size: 13px;
+  }
+  .pick { margin-top: 5px; }
+  .connect { display: flex; gap: 8px; margin-top: 4px; }
+  .connect input { flex: 1; min-width: 0; font-variant-numeric: tabular-nums; }
+  .mode { display: flex; align-items: center; gap: 9px; margin-top: 13px; font-size: 13px; cursor: pointer; }
+  .mode input { width: 15px; height: 15px; accent-color: var(--bad); margin: 0; }
+  .mode span { color: var(--side-muted); }
+  .mode.on span { color: #ff9a8c; font-weight: 600; }
+  .mode input#think, .mode input#ask { accent-color: var(--cyan); }
+  #approvalLine { color: #ff9a8c; }
+  #reportLog { color: var(--side-muted); }
+  #reportLog a, #reports a { color: var(--cyan); text-decoration: none; }
+  #reports li { border-top: 1px solid var(--side-line); padding: 6px 0; }
+  .foot { margin-top: auto; padding-top: 22px; font-size: 11.5px; color: var(--side-muted); line-height: 1.5; }
+
+  /* ---------- main chat ---------- */
+  .topbar { padding: 14px 24px 0; }
+  .topbar .btn { border-color: var(--line); background: var(--surface); color: var(--ink); }
+  .topbar .btn:hover { border-color: var(--accent); color: var(--accent); }
+  #log { padding: 14px 24px 24px; }
+  .col { max-width: 840px; }
+
+  .empty { padding: 9vh 0 0; }
+  .empty h2 { font: 600 32px/1.15 var(--display); margin: 0 0 10px; letter-spacing: .2px; }
+  .empty h2 span { color: var(--accent); }
+  .suggest button {
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+    border-radius: 20px; padding: 7px 15px; font-size: 14px;
+  }
+  .suggest button:hover { border-color: var(--accent); color: var(--accent); background: var(--surface); }
+
+  .msg.user .body { background: var(--user); padding: 10px 15px; border-radius: 14px 14px 4px 14px; }
+  .msg.bot .body { padding: 2px 0 2px 14px; border-left: 2px solid var(--accent); }
+  .body table { background: var(--surface); }
+  .body th, .body td { padding: 6px 11px; }
+
+  details.reason pre { font-family: var(--body); font-size: 12.5px; }
+  .typing { font-size: 12.5px; }
+
+  .approval { padding: 11px 13px; margin: 9px 0; }
+  .approval h4 { font: 600 12px/1.3 var(--display); letter-spacing: 1px; text-transform: uppercase; margin: 0 0 7px; color: var(--wait); }
+  .approval .acts { flex-wrap: wrap; }
+  .approval .btn { border-color: var(--line); background: var(--surface); color: var(--ink); }
+  .approval .btn:hover { border-color: var(--accent); background: var(--surface); }
+  .approval .verdict { margin: 0; }
+  .btn.run { background: var(--bad); border-color: var(--bad); color: #fff; font-weight: 600; }
+  .btn.run:hover { filter: brightness(1.1); border-color: var(--bad); background: var(--bad); }
+
+  form { padding: 0 24px 22px; }
+  .composer {
+    border: 1px solid var(--line); border-radius: 12px; padding: 8px 8px 8px 15px;
+    box-shadow: 0 1px 2px rgba(15,34,51,.05);
+  }
+
+  @media (max-width: 800px) {
+    aside { width: auto; }
+    aside::before { width: auto; height: auto; inset: 0; background-image: var(--mesh); }
+    #log, form, .topbar { padding-left: 14px; padding-right: 14px; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <h1 id="title">Alper - OpenSource AI Model</h1>
+    <p>Local model, ANSYS Mechanical over MCP. Nothing leaves this computer.</p>
+  </div>
+
+  <section class="block" aria-label="Status">
+    <h2>Status</h2>
+    <div class="row"><i class="dot wait" id="dLlm"></i><b>Model</b><span id="sLlm">checking</span>
+      <select id="model" class="pick" aria-label="Model" hidden></select></div>
+    <div class="row"><i class="dot wait" id="dMcp"></i><b>MCP servers</b><span id="sMcp">checking</span></div>
+    <div class="row"><i class="dot wait" id="dMech"></i><b>Mechanical</b><span id="sMech">checking</span></div>
+    <div class="connect"><input id="port" type="number" inputmode="numeric" aria-label="gRPC port">
+      <button class="btn" id="connect" type="button">Connect</button></div>
+    <label class="mode"><input type="checkbox" id="think">
+      <span id="thinkText">Reasoning (slower, more reliable)</span></label>
+    <label class="mode" id="modeLabel" hidden><input type="checkbox" id="write">
+      <span id="modeText">Write mode - lets the model change the model</span></label>
+    <label class="mode" id="askLabel" hidden><input type="checkbox" id="ask">
+      <span id="askText">Ask before each change</span></label>
+    <p id="approvalLine" hidden>Approved for this session.
+      <button class="btn" id="reapprove" type="button">Ask again</button></p>
+  </section>
+
+  <section class="block" aria-label="Report">
+    <h2>Report</h2>
+    <button class="btn primary wide" id="report" type="button">Create Word report</button>
+    <p id="reportLog" aria-live="polite"></p>
+    <ul id="reports"></ul>
+  </section>
+
+  <p class="foot" id="foot">Read-only: the model can inspect the open model but cannot change, mesh or solve it.</p>
+</aside>
+
+<main>
+  <div class="topbar"><button class="btn" id="newChat" type="button">New chat</button></div>
+  <div id="log" aria-live="polite"><div class="col" id="col"></div></div>
+  <form id="form">
+    <div class="col composer">
+      <textarea id="input" rows="1" placeholder="Ask about the open model" aria-label="Message"></textarea>
+      <button class="btn primary" id="send" type="submit">Send</button>
+    </div>
+  </form>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const col = $("col"), log = $("log"), input = $("input");
+let history = [], busy = false;
+
+const SUGGESTIONS = [
+  "Which analyses are in the model and are they solved?",
+  "List the bodies and their materials",
+  "Show mesh statistics",
+  "List the supports and loads of the first analysis",
+  "Give the natural frequencies",
+];
+
+/* Some thinking models leak their reasoning: Ollama eats the opening <think>
+   but leaves the closing tag, so drop anything up to the last </think> too. */
+function stripThinking(src) {
+  const end = src.lastIndexOf("</think>");
+  if (end >= 0) src = src.slice(end + 8);
+  return src.replace(/<think>[\s\S]*$/, "").trim();
+}
+
+/* ---------- small markdown renderer (tables, lists, code, bold) ---------- */
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const inline = (s) => esc(s)
+  .replace(/`([^`]+)`/g, "<code>$1</code>")
+  .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+  .replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
+
+function md(src) {
+  src = stripThinking(src);
+  const lines = src.split("\n"), out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^```/.test(line)) {
+      const buf = []; i++;
+      while (i < lines.length && !/^```/.test(lines[i])) buf.push(lines[i++]);
+      i++; out.push(`<pre><code>${esc(buf.join("\n"))}</code></pre>`); continue;
+    }
+    if (/^\s*\|.*\|\s*$/.test(line) && i + 1 < lines.length && /^\s*\|?\s*:?-{2,}/.test(lines[i + 1])) {
+      const cells = (l) => l.trim().replace(/^\||\|$/g, "").split("|").map((c) => inline(c.trim()));
+      const head = cells(line); i += 2; const rows = [];
+      while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(cells(lines[i++]));
+      out.push(`<div class="tablewrap"><table><thead><tr>${head.map((c) => `<th>${c}</th>`).join("")}</tr></thead><tbody>` +
+        rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("") + "</tbody></table></div>");
+      continue;
+    }
+    if (/^\s*([-*]|\d+\.)\s+/.test(line)) {
+      const ordered = /^\s*\d+\./.test(line), items = [];
+      while (i < lines.length && /^\s*([-*]|\d+\.)\s+/.test(lines[i])) items.push(inline(lines[i++].replace(/^\s*([-*]|\d+\.)\s+/, "")));
+      const tag = ordered ? "ol" : "ul";
+      out.push(`<${tag}>${items.map((x) => `<li>${x}</li>`).join("")}</${tag}>`); continue;
+    }
+    const h = line.match(/^(#{1,4})\s+(.*)/);
+    if (h) { out.push(`<h${h[1].length < 3 ? 3 : 4}>${inline(h[2])}</h${h[1].length < 3 ? 3 : 4}>`); i++; continue; }
+    if (!line.trim()) { i++; continue; }
+    const para = [];
+    while (i < lines.length && lines[i].trim() && !/^(```|\s*\||\s*([-*]|\d+\.)\s+|#{1,4}\s)/.test(lines[i])) para.push(inline(lines[i++]));
+    if (para.length) out.push(`<p>${para.join("<br>")}</p>`); else i++;
+  }
+  return out.join("");
+}
+
+/* ---------- chat ---------- */
+function renderEmpty() {
+  col.innerHTML = `<div class="empty"><h2>Ask the <span>open model</span></h2>
+    <p>Questions are answered from Mechanical through read-only tools. Connect first if the status shows it is not connected.</p>
+    <div class="suggest">${SUGGESTIONS.map((s) => `<button type="button">${esc(s)}</button>`).join("")}</div></div>`;
+  col.querySelectorAll(".suggest button").forEach((b) => b.onclick = () => { input.value = b.textContent; send(); });
+}
+
+function addMsg(role, html) {
+  if (col.querySelector(".empty")) col.innerHTML = "";
+  const el = document.createElement("div");
+  el.className = `msg ${role}`;
+  el.innerHTML = `<div class="body">${html}</div>`;
+  col.appendChild(el);
+  log.scrollTop = log.scrollHeight;
+  return el.querySelector(".body");
+}
+
+async function stream(url, body, onEvent) {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const reader = res.body.getReader(), dec = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += dec.decode(value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+      if (line) onEvent(JSON.parse(line));
+    }
+  }
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text || busy) return;
+  busy = true; $("send").disabled = true; input.value = ""; autosize();
+  addMsg("user", esc(text));
+  history.push({ role: "user", content: text });
+
+  const body = addMsg("bot", "");
+  const tools = document.createElement("div"), answer = document.createElement("div");
+  const typing = document.createElement("div");
+  typing.className = "typing"; typing.dataset.label = "Thinking"; typing.textContent = "Thinking";
+  const t0 = Date.now();
+  const elapsed = () => ((Date.now() - t0) / 1000).toFixed(1) + " s";
+  const tick = setInterval(() => {
+    if (typing.dataset.label) typing.textContent = `${typing.dataset.label} - ${elapsed()}`;
+  }, 500);
+  body.append(tools, answer, typing);
+  let reply = "", pending = null, reason = null;
+
+  try {
+    await stream("/api/chat", { messages: history }, (ev) => {
+      if (ev.type === "thinking") {
+        if (!reason) {
+          reason = document.createElement("details");
+          reason.className = "reason";
+          reason.innerHTML = "<summary>Reasoning</summary><pre></pre>";
+          tools.appendChild(reason);
+        }
+        reason.querySelector("pre").textContent += ev.text;
+        typing.dataset.label = "Thinking";
+      } else if (ev.type === "token") { reply += ev.text; answer.innerHTML = md(reply); typing.dataset.label = "Writing"; }
+      else if (ev.type === "approval") {
+        pending = null;
+        const card = document.createElement("div");
+        card.className = "approval"; card.id = "ap_" + ev.id;
+        card.innerHTML = `<h4>Approval needed - this changes the model</h4>
+          <div><code>${esc(ev.name)}</code></div>
+          <pre>${esc(JSON.stringify(ev.args, null, 1))}</pre>
+          <div class="acts"><button class="btn run" type="button">Run it</button>
+            <button class="btn" type="button">Run all this session</button>
+            <button class="btn" type="button">Reject</button></div>`;
+        const [run, always, reject] = card.querySelectorAll("button");
+        const decide = (approved, all) => {
+          run.disabled = always.disabled = reject.disabled = true;
+          fetch("/api/approve", { method: "POST", headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ id: ev.id, approved, always: !!all }) })
+            .then(refreshStatus);
+        };
+        run.onclick = () => decide(true); always.onclick = () => decide(true, true);
+        reject.onclick = () => decide(false);
+        tools.appendChild(card); typing.dataset.label = "Waiting for your approval";
+      } else if (ev.type === "approval_result") {
+        const card = document.getElementById("ap_" + ev.id);
+        if (card) {
+          card.querySelector(".acts").outerHTML =
+            `<p class="verdict">${ev.approved ? "Approved - running" : "Rejected - not run"}</p>`;
+          card.style.borderColor = ev.approved ? "var(--ok)" : "var(--line)";
+        }
+        typing.dataset.label = "Thinking";
+      } else if (ev.type === "tool") {
+        pending = document.createElement("details");
+        pending.className = "tool" + (ev.write ? " write" : "");
+        pending.innerHTML = `<summary>${esc(ev.name)}</summary><pre>${esc(JSON.stringify(ev.args, null, 1))}</pre>`;
+        tools.appendChild(pending); typing.dataset.label = `Running ${ev.name}`;
+      } else if (ev.type === "tool_result" && pending) {
+        pending.classList.add(ev.ok ? "ok" : "bad");
+        pending.insertAdjacentHTML("beforeend", `<pre>${esc(ev.preview)}</pre>`);
+        typing.dataset.label = "Thinking";
+      } else if (ev.type === "error") { answer.insertAdjacentHTML("beforeend", `<p class="err">${esc(ev.message)}</p>`); }
+      log.scrollTop = log.scrollHeight;
+    });
+  } catch (e) {
+    answer.insertAdjacentHTML("beforeend", `<p class="err">Request failed: ${esc(e.message)}. Is the app still running?</p>`);
+  }
+  clearInterval(tick);
+  typing.textContent = elapsed();
+  const clean = stripThinking(reply);
+  if (clean) history.push({ role: "assistant", content: clean });
+  busy = false; $("send").disabled = false; input.focus();
+}
+
+/* ---------- status, connect, report ---------- */
+function setRow(key, state, text) {
+  $("d" + key).className = "dot " + state;
+  $("s" + key).textContent = text;
+}
+
+async function refreshStatus() {
+  try {
+    const s = await (await fetch("/api/status")).json();
+    document.title = s.title; $("title").textContent = s.title;
+    setRow("Llm", s.llm.ok ? "ok" : "bad", s.llm.ok ? "" : s.llm.error);
+    const models = s.llm.available || [];
+    $("model").hidden = !models.length;
+    if (document.activeElement !== $("model")) {
+      $("model").innerHTML = models.map((m) => `<option${m === s.llm.model ? " selected" : ""}>${esc(m)}</option>`).join("");
+    }
+    const srv = Object.entries(s.servers);
+    const bad = srv.filter(([, v]) => !v.ok);
+    setRow("Mcp", srv.length && !bad.length ? "ok" : "bad",
+      srv.length ? srv.map(([k, v]) => v.ok ? `${k}: ${v.llm_tools.length} of ${v.tools} tools in chat` : `${k}: ${v.error}`).join("; ")
+                   + (s.local_tools.length ? ` + ${s.local_tools.length} host tool${s.local_tools.length > 1 ? "s" : ""}` : "")
+                 : "No server enabled in config.json");
+    const m = s.mechanical;
+    setRow("Mech", m.connected ? "ok" : "bad", m.connected ? `Connected on port ${m.port}` : (m.error || `Not connected (port ${s.grpc_port})`));
+    const w = s.write_mode || { enabled: false, on: false };
+    $("modeLabel").hidden = !w.enabled;
+    $("write").checked = w.on;
+    $("modeLabel").classList.toggle("on", w.on);
+    $("modeText").textContent = "Write mode - lets the model change the model";
+    $("think").checked = !!s.think;
+    $("thinkText").textContent = "Reasoning (slower, more reliable)";
+    $("askLabel").hidden = !w.on;
+    $("ask").checked = w.require_approval;
+    $("askText").textContent = "Ask before each change";
+    $("approvalLine").hidden = !(w.on && w.auto_approve && w.require_approval);
+    $("foot").textContent = w.on
+      ? (w.require_approval && !w.auto_approve
+            ? "Every tool that changes the model waits for your approval."
+            : "Write tools run without asking. Untick Write mode to stop that.")
+      : "Read-only: the model can inspect the open model but cannot change, mesh or solve it.";
+    $("connect").textContent = m.connected ? "Reconnect" : "Connect";
+    if (document.activeElement !== $("port")) $("port").value = m.connected ? m.port : s.grpc_port;
+  } catch { setRow("Llm", "bad", "App not reachable"); }
+}
+
+$("connect").onclick = async () => {
+  $("connect").disabled = true; setRow("Mech", "wait", "Connecting");
+  const port = parseInt($("port").value, 10);
+  try {
+    await fetch("/api/connect", { method: "POST", headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify(port ? { port } : {}) });
+  } finally { $("connect").disabled = false; refreshStatus(); }
+};
+
+$("think").onchange = async () => {
+  await fetch("/api/mode", { method: "POST", headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ think: $("think").checked }) });
+  refreshStatus();
+};
+
+$("ask").onchange = async () => {
+  await fetch("/api/mode", { method: "POST", headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ require_approval: $("ask").checked }) });
+  refreshStatus();
+};
+
+$("reapprove").onclick = async () => {
+  await fetch("/api/mode", { method: "POST", headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ auto_approve: false }) });
+  refreshStatus();
+};
+
+$("model").onchange = async () => {
+  await fetch("/api/model", { method: "POST", headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ model: $("model").value }) });
+  history = []; renderEmpty(); refreshStatus();
+};
+
+$("write").onchange = async () => {
+  await fetch("/api/mode", { method: "POST", headers: { "Content-Type": "application/json" },
+                             body: JSON.stringify({ write: $("write").checked }) });
+  history = []; renderEmpty();   // the tool list changed, so start a clean chat
+  refreshStatus();
+};
+
+async function refreshReports() {
+  const list = await (await fetch("/api/reports")).json();
+  $("reports").innerHTML = list.map((r) => `<li><a href="/files/${encodeURIComponent(r.name)}">${esc(r.name)}</a></li>`).join("");
+}
+
+$("report").onclick = async () => {
+  const btn = $("report"), msg = $("reportLog");
+  btn.disabled = true; msg.textContent = "Starting";
+  try {
+    await stream("/api/report", {}, (ev) => {
+      if (ev.type === "step") msg.textContent = ev.text;
+      else if (ev.type === "error") msg.innerHTML = `<span class="err">${esc(ev.message)}</span>`;
+      else if (ev.type === "report") msg.innerHTML = `Report ready: <a href="/files/${encodeURIComponent(ev.docx)}">${esc(ev.docx)}</a>`;
+    });
+  } catch (e) { msg.innerHTML = `<span class="err">Report failed: ${esc(e.message)}</span>`; }
+  btn.disabled = false; refreshReports();
+};
+
+/* ---------- composer ---------- */
+function autosize() { input.style.height = "auto"; input.style.height = Math.min(input.scrollHeight, 200) + "px"; }
+input.addEventListener("input", autosize);
+input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } });
+$("form").onsubmit = (e) => { e.preventDefault(); send(); };
+$("newChat").onclick = () => { if (!busy) { history = []; renderEmpty(); input.focus(); } };
+
+renderEmpty(); refreshStatus(); refreshReports();
+setInterval(() => { if (!busy) refreshStatus(); }, 20000);
+</script>
+</body>
+</html>
