@@ -4,8 +4,7 @@ A local chat and reporting front end for the ANSYS Mechanical model that is open
 computer. An open-weight language model runs on your machine through [Ollama](https://ollama.com),
 talks to Mechanical through the
 [mechanical-mcp](https://github.com/codersag/mechanical-mcp) server over stdio, and Mechanical
-itself is driven through PyMechanical's gRPC interface. No internet connection is used at
-runtime and nothing leaves the machine.
+itself is driven through PyMechanical's gRPC interface. Nothing leaves the machine.
 
 Two things it does:
 
@@ -140,24 +139,6 @@ model is not reloaded from disk between questions. To run the model on another m
 `ollama.url` at it; nothing else changes.
 
 ---
-
-## Known issues
-
-These come from the layers below this project:
-
-- **The gRPC port dies with Mechanical.** Restarting Mechanical means starting the server again
-  and entering the new port. The app checks the port with a TCP probe before connecting, because
-  PyMechanical hangs forever on a dead port and that blocks the whole MCP server.
-- **The Mechanical tree does not repaint** after changes made over gRPC. The objects are in the
-  data model (`refresh_tree` or `list_boundary_conditions` will show them) but the Outline may
-  not show them until you collapse and expand it. Use `save_project` so changes survive a restart.
-- **`add_standard_gravity` in mechanical-mcp** calls `Analysis.AddStandardEarthGravity()`, which
-  does not exist in every Mechanical version. Use `add_gravity` from this project instead.
-- **`solve_analysis` reports success even when the solve did not run** (`Solve complete. Status:
-  SolveRequired`). The agent treats `SolveRequired` and `SolveFailed` as failures and asks the
-  model to read `get_messages`.
-- The local model can still pick the wrong tool or the wrong argument. Every write is shown
-  before it runs for exactly that reason.
 
 ## License
 
