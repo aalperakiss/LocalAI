@@ -52,9 +52,8 @@ read-only scripts inside Mechanical:
 | `session_info` | Which project and session the tools are attached to, and what each analysis contains |
 | `refresh_tree` | Refreshes the GUI tree and reports what the analysis really holds |
 | `evaluate_results` | `EvaluateAllResults()` on an already solved analysis (write) |
-| `add_gravity` | Gravity as a direction vector, picking whatever gravity method the Mechanical version has (write) |
 | `save_project` | Saves the project so tool changes survive a restart (write) |
-
+and more
 ---
 
 ## Requirements
