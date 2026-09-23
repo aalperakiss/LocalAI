@@ -1,3 +1,8 @@
+
+
+https://github.com/user-attachments/assets/6fa1ade7-1331-4b40-a388-f72c1cccc27d
+
+
 # OpenSourceAI MCP Mechanical
 
 A local chat and reporting front end for the ANSYS Mechanical model that is open on your
