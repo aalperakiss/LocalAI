@@ -6,7 +6,7 @@ https://github.com/user-attachments/assets/6fa1ade7-1331-4b40-a388-f72c1cccc27d
 # OpenSourceAI MCP Mechanical
 
 A local chat and reporting front end for the ANSYS Mechanical model that is open on your
-computer. An open-weight language model runs on your machine through [Ollama](https://ollama.com),
+computer. You can choose or An open-weight language model runs on your machine through [Ollama](https://ollama.com),
 talks to Mechanical through the
 [mechanical-mcp](https://github.com/codersag/mechanical-mcp) server over stdio, and Mechanical
 itself is driven through PyMechanical's gRPC interface. Nothing leaves the machine.
